@@ -56,7 +56,7 @@ class SunMoonWidget : Widget
 
 		int centerX = rc.left + rc.width / 2;
 		int centerY = rc.top + rc.height / 2;
-		int radius = min(rc.width, rc.height) / 2 - 30;
+		int radius = min(rc.width, rc.height) / 2 - 40;
 		if (radius < 10)
 			return;
 
@@ -64,8 +64,11 @@ class SunMoonWidget : Widget
 		double currentHour = now.hour + now.minute / 60.0 + now.second / 3600.0;
 		auto solar = calculateSolar(latitude, longitude, cast(Date) now);
 
+		// Colors
 		uint colorSkyDay = 0xFF1E90FF;
-		uint colorSkyNight = 0xFF000033;
+		uint colorSkyNight = 0xFF000022;
+		uint colorNightArc = 0xFF483D8B; // Dark Slate Blue
+		uint colorNightConsumed = 0xFF9370DB; // Medium Purple
 		uint colorSun = 0xFFFFD700;
 		uint colorMoon = 0xFFE6E6FA;
 
@@ -78,48 +81,105 @@ class SunMoonWidget : Widget
 			return (h / 24.0) * 2.0 * PI - PI / 2.0;
 		}
 
+		// Draw Night Arc
+		// Night starts at sunset and ends at sunrise next day
+		double nightStartAng = hourToAngle(solar.sunset);
+		double nightEndAng = hourToAngle(solar.sunrise);
+
+		// Drawing segments for the night arc
+		for (double h = solar.sunset; h < 24.0; h += 0.1)
+		{
+			double ang1 = hourToAngle(h);
+			double ang2 = hourToAngle(h + 0.1);
+			int x1 = cast(int)(centerX + radius * cos(ang1));
+			int y1 = cast(int)(centerY + radius * sin(ang1));
+			int x2 = cast(int)(centerX + radius * cos(ang2));
+			int y2 = cast(int)(centerY + radius * sin(ang2));
+			uint color = (currentHour >= h && !isDay) ? colorNightConsumed : colorNightArc;
+			buf.drawLine(Point(x1, y1), Point(x2, y2), color);
+		}
+		for (double h = 0.0; h < solar.sunrise; h += 0.1)
+		{
+			double ang1 = hourToAngle(h);
+			double ang2 = hourToAngle(h + 0.1);
+			int x1 = cast(int)(centerX + radius * cos(ang1));
+			int y1 = cast(int)(centerY + radius * sin(ang1));
+			int x2 = cast(int)(centerX + radius * cos(ang2));
+			int y2 = cast(int)(centerY + radius * sin(ang2));
+			uint color = (currentHour >= h && !isDay) ? colorNightConsumed : colorNightArc;
+			buf.drawLine(Point(x1, y1), Point(x2, y2), color);
+		}
+
+		// Markers
 		for (int i = 0; i < 24; i++)
 		{
 			double ang = (i / 24.0) * 2.0 * PI - PI / 2.0;
-			float innerR = radius - (i % 6 == 0 ? 10 : 5);
+			float innerR = radius - (i % 6 == 0 ? 12 : 6);
 			int x1 = cast(int)(centerX + innerR * cos(ang));
 			int y1 = cast(int)(centerY + innerR * sin(ang));
 			int x2 = cast(int)(centerX + radius * cos(ang));
 			int y2 = cast(int)(centerY + radius * sin(ang));
-			buf.drawLine(Point(x1, y1), Point(x2, y2), i % 6 == 0 ? 0xFFFFFFFF : 0xFF888888);
+			buf.drawLine(Point(x1, y1), Point(x2, y2), i % 6 == 0 ? 0xFFFFFFFF : 0xFF666666);
 		}
 
+		// Sun & Moon
 		double sunAng = hourToAngle(currentHour);
-		int sunX = cast(int)(centerX + (radius - 40) * cos(sunAng));
-		int sunY = cast(int)(centerY + (radius - 40) * sin(sunAng));
+		int sunX = cast(int)(centerX + (radius - 50) * cos(sunAng));
+		int sunY = cast(int)(centerY + (radius - 50) * sin(sunAng));
 		if (isDay)
-		{
 			buf.drawEllipseF(sunX, sunY, 15, 15, 0, 0, colorSun);
-		}
 		else
-		{
-			buf.drawEllipseF(sunX, sunY, 10, 10, 0, 0, 0xFF333300);
-		}
+			buf.drawEllipseF(sunX, sunY, 8, 8, 0, 0, 0xFF333300);
 
 		double moonAng = sunAng + PI;
-		int moonX = cast(int)(centerX + (radius - 40) * cos(moonAng));
-		int moonY = cast(int)(centerY + (radius - 40) * sin(moonAng));
+		int moonX = cast(int)(centerX + (radius - 50) * cos(moonAng));
+		int moonY = cast(int)(centerY + (radius - 50) * sin(moonAng));
 		buf.drawEllipseF(moonX, moonY, 12, 12, 0, 0, colorMoon);
 
+		// Current Time Indicator
 		double indAng = hourToAngle(currentHour);
 		int indX = cast(int)(centerX + radius * cos(indAng));
 		int indY = cast(int)(centerY + radius * sin(indAng));
 		buf.drawLine(Point(centerX, centerY), Point(indX, indY), 0xFFFF4500);
 		buf.drawEllipseF(indX, indY, 6, 6, 0, 0, 0xFFFF4500);
 
+		// Night Stats
+		double totalNight = (24.0 - solar.sunset) + solar.sunrise;
+		double nightElapsed = 0;
+		if (!isDay)
+		{
+			if (currentHour >= solar.sunset)
+				nightElapsed = currentHour - solar.sunset;
+			else
+				nightElapsed = (24.0 - solar.sunset) + currentHour;
+		}
+
+		FontRef fnt = font;
+		if (fnt.isNull)
+			fnt = FontManager.instance.getFont(14, FontWeight.Normal, false, FontFamily.SansSerif, "Arial");
+
+		int ty = centerY + radius + 10;
+		if (!isDay)
+		{
+			dstring progressStr = ("Night Progress: " ~ to!string(
+					cast(int)(100.0 * nightElapsed / totalNight)) ~ "%").to!dstring;
+			fnt.drawText(buf, centerX - 55, ty, progressStr, 0xFFFFFFFF);
+			ty += 20;
+			dstring remStr = ("Remaining: " ~ to!string(cast(int)(
+					totalNight - nightElapsed)) ~ "h " ~ to!string(
+					cast(int)(((totalNight - nightElapsed) % 1.0) * 60.0)) ~ "m").to!dstring;
+			fnt.drawText(buf, centerX - 55, ty, remStr, 0xFFAAAAFF);
+		}
+		else
+		{
+			fnt.drawText(buf, centerX - 40, ty, "Daylight"d, 0xFFFFFF00);
+		}
+
 		if (showLocation)
 		{
-			FontRef fnt = font;
-			if (fnt.isNull)
-				fnt = FontManager.instance.getFont(14, FontWeight.Normal, false, FontFamily.SansSerif, "Arial");
 			dstring locStr = ("Lat: " ~ to!string(latitude) ~ " Lon: " ~ to!string(longitude))
 				.to!dstring;
-			fnt.drawText(buf, centerX - 60, centerY + radius + 15, locStr, 0xFFCCCCCC);
+			fnt.drawText(buf, centerX - 60, centerY - radius - 25, locStr, 0xFF666666);
 		}
 	}
 }
@@ -137,7 +197,7 @@ class MainView : VerticalLayout
 	this()
 	{
 		super("main_view");
-		layoutWidth(FILL_PARENT).layoutHeight(FILL_PARENT).backgroundColor(0xFF121212);
+		layoutWidth(FILL_PARENT).layoutHeight(FILL_PARENT).backgroundColor(0xFF0A0A0A);
 
 		auto header = new HorizontalLayout();
 		header.layoutWidth(FILL_PARENT).layoutHeight(WRAP_CONTENT);
@@ -156,7 +216,7 @@ class MainView : VerticalLayout
 
 		_settingsPanel = new ScrollWidget("settings_panel");
 		_settingsPanel.layoutWidth(FILL_PARENT).layoutHeight(WRAP_CONTENT)
-			.backgroundColor(0xFF2D2D2D).padding(10);
+			.backgroundColor(0xFF1A1A1A).padding(10);
 		_settingsPanel.visibility = Visibility.Gone;
 
 		auto settingsContent = new VerticalLayout();
@@ -228,7 +288,7 @@ class MainView : VerticalLayout
 extern (C) int UIAppMain(string[] args)
 {
 	Window window = Platform.instance.createWindow("Solstice Widget"d, null, WindowFlag.Resizable | WindowFlag
-			.Borderless, 350, 400);
+			.Borderless, 350, 420);
 	window.mainWidget = new MainView();
 	window.show();
 	return Platform.instance.enterMessageLoop();
