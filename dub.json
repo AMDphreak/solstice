@@ -1,0 +1,8 @@
+{
+	"description": "A minimal D application.",
+	"authors": [
+		"rjamd"
+	],
+	"license": "proprietary",
+	"name": "solstice"
+}

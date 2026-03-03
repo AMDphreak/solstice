@@ -1,0 +1,22 @@
+= Solstice
+:sectnums:
+:toc: left
+:toclevels: 3
+
+A widget-style sun-moon cycle tracker built with D and dlangui.
+
+== Features
+
+* Resizable vector graphic of the sun-moon cycle.
+* Temporal position indicator based on time and location.
+* Hidden settings menu (top right toggle).
+* Toggleable location display.
+
+== Build Instructions
+
+Depends on `dub` and `dlangui`.
+
+[source,powershell]
+----
+dub run
+----

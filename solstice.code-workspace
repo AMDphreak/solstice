@@ -1,0 +1,34 @@
+{
+    "folders": [
+        {
+            "path": "."
+        }
+    ],
+    "extensions": {
+        "recommendations": [
+            "dprint.dprint",
+            "webfreak.code-d",
+            "asciidoctor.asciidoctor-vscode",
+            "DavidAnson.vscode-markdownlint",
+            "redhat.vscode-yaml"
+        ]
+    },
+    "settings": {
+        "files.exclude": {
+            "**/.git": true,
+            "**/obj": true,
+            "**/*.exe": true,
+            "**/*.obj": true,
+            "**/*.pdb": true
+        },
+        "editor.tabSize": 2,
+        "editor.formatOnSave": true,
+        "editor.defaultFormatter": "dprint.dprint",
+        "[d]": {
+            "editor.defaultFormatter": "webfreak.code-d"
+        },
+        "[asciidoc]": {
+            "editor.wordWrap": "on"
+        }
+    }
+}
