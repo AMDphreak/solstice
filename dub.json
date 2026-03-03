@@ -1,8 +1,12 @@
 {
-	"description": "A minimal D application.",
-	"authors": [
-		"rjamd"
-	],
-	"license": "proprietary",
-	"name": "solstice"
+  "name": "solstice",
+  "description": "Widget-style sun-moon cycle app",
+  "dependencies": {
+    "dlangui": "~>0.10.8"
+  },
+  "targetType": "executable",
+  "authors": [
+    "rjamd"
+  ],
+  "license": "proprietary"
 }
